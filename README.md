@@ -198,9 +198,36 @@ The sidebar and action buttons hide automatically based on the active user's rol
 npm run build
 ```
 
-Output goes to `dist/`. Serve with any static host (Vercel, Netlify, GitHub Pages, etc.).
+Output goes to `dist/`.
 
-> Remember to point `VITE_API_URL` to a deployed backend in production.
+---
+
+## Deployment
+
+### Option A — Single service on Render.com (recommended, free)
+
+The Express server is configured to serve the built React SPA in production, so you only need **one URL**.
+
+1. Push the repo to GitHub (already done).
+2. Sign up at [render.com](https://render.com) and click **New → Blueprint**.
+3. Connect your `Dashboard` repo. Render auto-detects [`render.yaml`](./render.yaml) and provisions a free Web Service.
+4. Wait ~3 minutes for the first build. You'll get a URL like `https://ems-dashboard-xxxx.onrender.com`.
+5. Open it on any device — login & sign-up will work end-to-end.
+
+> ⚠️ **SQLite on free plans is ephemeral** — the database resets on every restart (and free Render services sleep after 15 min of inactivity). For persistent storage, either upgrade and attach a disk, or migrate to Postgres (Neon / Supabase have free tiers).
+
+### Option B — Frontend on Vercel + backend on Render
+
+If you've already deployed the frontend to Vercel and want to keep it there:
+
+1. Deploy the backend separately on Render using `render.yaml` (as above) but pointing the start command at `npm run server` only — you'll still get an HTTPS URL.
+2. In your **Vercel** project: **Settings → Environment Variables** → add:
+   ```
+   VITE_API_URL = https://your-backend.onrender.com
+   ```
+3. Redeploy the Vercel project. Login & sign-up will then call the Render backend.
+
+> ⚠️ Both ends must be HTTPS or the browser will block the request as mixed content. Render and Vercel both give you HTTPS automatically.
 
 ---
 

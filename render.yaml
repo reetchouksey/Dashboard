@@ -1,0 +1,25 @@
+# Render.com one-click deploy blueprint.
+# After pushing this file to GitHub:
+#   1. Go to https://render.com → New → Blueprint
+#   2. Connect your reetchouksey/Dashboard repo
+#   3. Render auto-detects this file and deploys both the API and the
+#      built React frontend together as a single web service.
+#
+# Note: SQLite on the free plan is ephemeral – it resets on every restart.
+# For persistent data, attach a disk (paid) or migrate to Postgres.
+
+services:
+  - type: web
+    name: ems-dashboard
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm run server
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: JWT_SECRET
+        generateValue: true
+      - key: PORT
+        value: 5000

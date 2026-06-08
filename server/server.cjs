@@ -5,6 +5,8 @@
 const express = require('express');
 const cors = require('cors');
 const os = require('os');
+const path = require('path');
+const fs = require('fs');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const db = require('./db.cjs');
@@ -201,8 +203,8 @@ app.use('/performance',   crudRouter('performance'));
 app.use('/activities',    crudRouter('activities', { sortBy: 'time' }));
 app.use('/notifications', crudRouter('notifications', { sortBy: 'time' }));
 
-// ---- Health & 404 ----
-app.get('/', (req, res) => {
+// ---- API health endpoint ----
+app.get('/api/health', (req, res) => {
   res.json({
     name: 'EMS Dashboard API',
     status: 'running',
@@ -214,6 +216,20 @@ app.get('/', (req, res) => {
     ],
   });
 });
+
+// ---- Production: also serve the built React SPA from /dist ----
+// In dev, this directory doesn't exist so we fall through to the API-only 404.
+const DIST_DIR = path.join(__dirname, '..', 'dist');
+if (fs.existsSync(DIST_DIR)) {
+  console.log('[server] Serving frontend from', DIST_DIR);
+  app.use(express.static(DIST_DIR));
+
+  // SPA fallback — any unknown route returns index.html so React Router takes over.
+  // We exclude /api, /auth, and the data resource paths so unknown API calls still 404.
+  app.get(/^(?!\/(api|auth|users|employees|departments|attendance|leaves|performance|activities|notifications)).*/, (req, res) => {
+    res.sendFile(path.join(DIST_DIR, 'index.html'));
+  });
+}
 
 app.use((req, res) => res.status(404).json({ message: `Not found: ${req.method} ${req.path}` }));
 

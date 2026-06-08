@@ -1,18 +1,25 @@
 import axios from 'axios';
 
 // Resolve the API base URL with a smart fallback chain:
-//   1. VITE_API_URL  – explicit override (used in production builds)
-//   2. window host   – when visiting from another device on the LAN
-//                      (e.g. phone hits http://192.168.1.10:3000, so we
-//                       call http://192.168.1.10:5000 automatically)
-//   3. localhost     – default during plain `npm start` on your PC
+//   1. VITE_API_URL    – explicit override (recommended for prod)
+//   2. Production host – on a deployed build, assume the API is served
+//                        from the same origin (single-service deploys
+//                        like Render where Express also serves /dist).
+//   3. LAN hostname    – when accessing the dev server from another device
+//                        on the same Wi-Fi (phone -> http://192.168.x.x:3000),
+//                        call the API on the same host with port 5000.
+//   4. localhost:5000  – default when running `npm start` on your PC.
 const resolveBaseURL = () => {
   const fromEnv = import.meta.env.VITE_API_URL;
   if (fromEnv) return fromEnv.replace(/\/$/, '');
 
   if (typeof window !== 'undefined' && window.location?.hostname) {
-    const { protocol, hostname } = window.location;
-    if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
+    const { protocol, hostname, origin } = window.location;
+    const isLocal = hostname === 'localhost' || hostname === '127.0.0.1';
+    if (!isLocal) {
+      // Same-origin in production builds (single-service deployments).
+      if (import.meta.env.PROD) return origin;
+      // Dev mode being viewed from another device on the LAN.
       return `${protocol}//${hostname}:5000`;
     }
   }
