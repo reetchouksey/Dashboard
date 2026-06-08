@@ -4,6 +4,7 @@
 
 const express = require('express');
 const cors = require('cors');
+const os = require('os');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const db = require('./db.cjs');
@@ -216,8 +217,23 @@ app.get('/', (req, res) => {
 
 app.use((req, res) => res.status(404).json({ message: `Not found: ${req.method} ${req.path}` }));
 
-app.listen(PORT, () => {
-  console.log(`\n  EMS API server listening on http://localhost:${PORT}`);
-  console.log(`  SQLite database: server/database.db`);
-  console.log(`  Try: GET http://localhost:${PORT}/employees\n`);
-});
+// Show every reachable URL so the developer can pick the right one
+// when accessing the API from a phone or tablet on the same network.
+const printNetworkAddresses = () => {
+  const lines = [`http://localhost:${PORT}`];
+  const ifaces = os.networkInterfaces();
+  Object.values(ifaces).forEach((entries) => {
+    entries.forEach((entry) => {
+      if (entry.family === 'IPv4' && !entry.internal) {
+        lines.push(`http://${entry.address}:${PORT}`);
+      }
+    });
+  });
+  console.log('\n  EMS API server is running on:');
+  lines.forEach((l) => console.log('    →', l));
+  console.log('\n  SQLite database: server/database.db');
+  console.log('  For phones: use the LAN URL above and set VITE_API_URL accordingly.\n');
+};
+
+// Bind to 0.0.0.0 so it's reachable from other devices on the same Wi-Fi.
+app.listen(PORT, '0.0.0.0', printNetworkAddresses);

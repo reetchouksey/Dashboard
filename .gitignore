@@ -21,9 +21,10 @@ yarn-error.log*
 *.swp
 Thumbs.db
 
-# env
+# env (but keep .env.example as a template)
 .env
 .env.*
+!.env.example
 .vite
 
 # database files (regenerated from db.json on first run)
