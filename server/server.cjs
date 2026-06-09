@@ -188,10 +188,56 @@ app.get('/auth/me', (req, res) => {
   res.json(stripPw(user));
 });
 
-// ---- /users (admin convenience) ----
+// ---- /users ----
 app.get('/users', (req, res) => {
   const rows = db.prepare('SELECT id, name, email, role, avatar, createdAt FROM users').all();
   res.json(rows);
+});
+
+// Update profile fields (name / email / avatar). Users can update their own
+// profile; admins can update anyone. Password updates are explicitly excluded.
+app.patch('/users/:id', (req, res) => {
+  if (!req.user) return res.status(401).json({ message: 'Unauthenticated' });
+
+  const targetId = Number(req.params.id);
+  const isSelf = req.user.id === targetId;
+  const isAdmin = req.user.role === 'admin';
+  if (!isSelf && !isAdmin) {
+    return res.status(403).json({ message: 'Not allowed to update this profile' });
+  }
+
+  const allowed = ['name', 'email', 'avatar'];
+  if (isAdmin) allowed.push('role');
+  const updates = {};
+  allowed.forEach((k) => {
+    if (req.body[k] !== undefined) updates[k] = req.body[k];
+  });
+  if (Object.keys(updates).length === 0) {
+    return res.status(400).json({ message: 'No valid fields to update' });
+  }
+
+  // Reject duplicate email (the unique constraint would throw, but we want a clean message).
+  if (updates.email) {
+    const clash = db
+      .prepare('SELECT id FROM users WHERE email = ? AND id != ?')
+      .get(updates.email, targetId);
+    if (clash) return res.status(409).json({ message: 'Email already in use' });
+  }
+
+  const set = Object.keys(updates).map((k) => `${k} = ?`).join(', ');
+  const values = Object.values(updates);
+  const info = db.prepare(`UPDATE users SET ${set} WHERE id = ?`).run(...values, targetId);
+  if (info.changes === 0) return res.status(404).json({ message: 'User not found' });
+
+  const row = db
+    .prepare('SELECT id, name, email, role, avatar, createdAt FROM users WHERE id = ?')
+    .get(targetId);
+
+  // Audit trail
+  db.prepare('INSERT INTO activities (user, action, target, time) VALUES (?,?,?,?)')
+    .run(row.name, 'updated profile', 'Self', new Date().toISOString());
+
+  res.json(row);
 });
 
 // ---- Mounted CRUD routes ----

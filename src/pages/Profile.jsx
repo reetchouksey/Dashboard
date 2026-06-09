@@ -4,6 +4,7 @@ import { FiEdit2, FiSave, FiX } from 'react-icons/fi';
 import { updateProfile } from '../redux/slices/authSlice.js';
 import { useAuth } from '../hooks/useAuth.js';
 import { useToast } from '../hooks/useToast.js';
+import api from '../services/api.js';
 
 const Profile = () => {
   const { user } = useAuth();
@@ -11,17 +12,32 @@ const Profile = () => {
   const toast = useToast();
 
   const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
     name: user?.name || '',
     email: user?.email || '',
     avatar: user?.avatar || '',
   });
 
-  const onSave = (e) => {
+  const onSave = async (e) => {
     e.preventDefault();
-    dispatch(updateProfile(form));
-    setEditing(false);
-    toast.success('Profile updated');
+    if (!user?.id) return;
+
+    if (!form.name.trim()) { toast.error('Name cannot be empty'); return; }
+    if (!/^\S+@\S+\.\S+$/.test(form.email)) { toast.error('Enter a valid email'); return; }
+
+    setSaving(true);
+    try {
+      // Persist the change to SQLite so it survives logouts and other browsers.
+      const { data } = await api.patch(`/users/${user.id}`, form);
+      dispatch(updateProfile(data));
+      setEditing(false);
+      toast.success('Profile saved to database');
+    } catch (err) {
+      toast.error(err.message || 'Failed to update profile');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -98,8 +114,8 @@ const Profile = () => {
                 </div>
               </div>
               {editing && (
-                <button type="submit" className="btn btn-primary">
-                  <FiSave /> Save Changes
+                <button type="submit" className="btn btn-primary" disabled={saving}>
+                  <FiSave /> {saving ? 'Saving…' : 'Save Changes'}
                 </button>
               )}
             </form>
