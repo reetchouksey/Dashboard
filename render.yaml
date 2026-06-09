@@ -13,12 +13,18 @@ services:
     name: ems-dashboard
     runtime: node
     plan: free
-    buildCommand: npm install && npm run build
+    # `--include=dev` forces install of devDependencies (vite, @vitejs/plugin-react)
+    # which would otherwise be skipped because Render sets NODE_ENV=production.
+    buildCommand: npm install --include=dev && npm run build
     startCommand: npm run server
     autoDeploy: true
     envVars:
+      - key: NODE_VERSION
+        value: 20.18.0
       - key: NODE_ENV
         value: production
+      - key: NPM_CONFIG_PRODUCTION
+        value: false
       - key: JWT_SECRET
         generateValue: true
       - key: PORT
