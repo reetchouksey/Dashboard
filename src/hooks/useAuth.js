@@ -9,5 +9,6 @@ export const useAuth = () => {
     isAdmin: auth.user?.role === 'admin',
     loading: auth.loading,
     error: auth.error,
+    errorCode: auth.errorCode,
   };
 };

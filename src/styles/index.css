@@ -546,6 +546,45 @@ button { font-family: inherit; cursor: pointer; }
   border-color: #c7d2fe;
 }
 
+/* Backend-unreachable banner — shown on the Login card when the API
+   isn't responding (e.g. deployed frontend with no backend) */
+.backend-down {
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 14px;
+  text-align: center;
+}
+.backend-down-icon {
+  font-size: 26px;
+  color: var(--danger);
+  margin-bottom: 4px;
+}
+.backend-down-title {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+.backend-down-msg {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+.backend-down-url {
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--text-muted);
+  word-break: break-all;
+}
+.backend-down-url code {
+  background: var(--bg-surface-2);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+}
+
 /* ===============  Charts  =============== */
 .chart-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 18px; }
 .chart-card { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 20px; box-shadow: var(--shadow-sm); }
@@ -688,7 +727,8 @@ img { max-width: 100%; height: auto; }
   .page-header { gap: 10px; }
   .page-title { font-size: 18px; }
   .page-subtitle { font-size: 12px; }
-  .page-header > .flex { flex-wrap: wrap; }
+  .page-header > .flex { flex-wrap: wrap; gap: 8px; }
+  .page-header > .flex .btn { flex: 0 1 auto; }
 
   .stat-grid { grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 18px; }
   .stat-card { padding: 14px; gap: 10px; border-radius: 12px; }
@@ -735,6 +775,19 @@ img { max-width: 100%; height: auto; }
   .modal-body { max-height: calc(100vh - 200px); }
   .toast-host { left: 12px; right: 12px; top: 12px; }
   .toast { min-width: 0; max-width: 100%; }
+
+  /* Keep top-bar dropdowns inside the viewport */
+  .dropdown-menu {
+    right: 8px !important; left: auto !important;
+    max-width: calc(100vw - 16px);
+  }
+  .notif-panel { width: calc(100vw - 16px); }
+
+  /* Keep chart cards padded sensibly so labels fit */
+  .chart-card { padding: 12px; }
+
+  /* Long content like email addresses should wrap on phones */
+  .table tbody td { word-break: break-word; }
 }
 
 /* Small phone */

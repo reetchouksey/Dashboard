@@ -48,17 +48,38 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (res) => res,
   (err) => {
+    const status = err?.response?.status;
     let message = err?.response?.data?.message;
-    if (!message) {
-      if (err?.code === 'ERR_NETWORK' || err?.message === 'Network Error') {
-        message =
-          `Cannot reach API at ${baseURL}. ` +
-          `Make sure the backend is running and reachable from this device.`;
-      } else {
-        message = err?.message || 'Unexpected error';
-      }
+    let code = 'UNKNOWN';
+
+    if (!err.response) {
+      // No response at all — backend is offline / unreachable / CORS-blocked
+      // or the request was a 404 from a static host that has no API.
+      code = 'BACKEND_UNREACHABLE';
+      message = `Cannot reach the API at ${baseURL}.`;
+    } else if (status === 404) {
+      // 404 specifically on auth / users routes from a deployed frontend
+      // means we hit the static host instead of a real backend.
+      code = 'BACKEND_NOT_DEPLOYED';
+      message = 'No backend service responded at this URL.';
+    } else if (status === 401) {
+      code = 'UNAUTHORIZED';
+      message = message || 'Invalid email or password';
+    } else if (status === 403) {
+      code = 'FORBIDDEN';
+      message = message || 'You do not have permission to do that';
+    } else if (status >= 500) {
+      code = 'SERVER_ERROR';
+      message = message || 'Server error – please try again';
     }
-    return Promise.reject(new Error(message));
+
+    if (!message) message = err?.message || 'Unexpected error';
+
+    const errorObj = new Error(message);
+    errorObj.code = code;
+    errorObj.status = status;
+    errorObj.baseURL = baseURL;
+    return Promise.reject(errorObj);
   }
 );
 

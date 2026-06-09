@@ -1,16 +1,17 @@
 import { useEffect, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { useNavigate, Navigate } from 'react-router-dom';
-import { FiMail, FiLock, FiUser, FiEye, FiEyeOff } from 'react-icons/fi';
+import { FiMail, FiLock, FiUser, FiEye, FiEyeOff, FiAlertTriangle } from 'react-icons/fi';
 import { loginUser, registerUser, clearError } from '../redux/slices/authSlice.js';
 import { useAuth } from '../hooks/useAuth.js';
 import { useToast } from '../hooks/useToast.js';
+import { baseURL } from '../services/api.js';
 
 const Login = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const toast = useToast();
-  const { isAuthenticated, loading, error } = useAuth();
+  const { isAuthenticated, loading, error, errorCode } = useAuth();
 
   const [mode, setMode] = useState('login'); // 'login' | 'signup'
   const [form, setForm] = useState({
@@ -173,9 +174,21 @@ const Login = () => {
             </div>
           )}
 
-          {(validationError || error) && (
+          {(errorCode === 'BACKEND_UNREACHABLE' || errorCode === 'BACKEND_NOT_DEPLOYED') ? (
+            <div className="backend-down">
+              <div className="backend-down-icon"><FiAlertTriangle /></div>
+              <div className="backend-down-title">Backend service is offline</div>
+              <div className="backend-down-msg">
+                The login server isn't reachable right now. If you're the admin,
+                make sure the backend is deployed and running, then refresh.
+              </div>
+              <div className="backend-down-url">
+                Tried: <code>{baseURL}</code>
+              </div>
+            </div>
+          ) : (validationError || error) ? (
             <div className="form-error mb-3">{validationError || error}</div>
-          )}
+          ) : null}
 
           <button
             type="submit"

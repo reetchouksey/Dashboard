@@ -26,7 +26,10 @@ export const loginUser = createAsyncThunk(
       const { data } = await api.post('/auth/login', { email, password });
       return persist(data.user, data.token);
     } catch (err) {
-      return rejectWithValue(err.message || 'Login failed');
+      return rejectWithValue({
+        message: err.message || 'Login failed',
+        code: err.code || 'UNKNOWN',
+      });
     }
   }
 );
@@ -39,7 +42,10 @@ export const registerUser = createAsyncThunk(
       const { data } = await api.post('/auth/register', { name, email, password, role });
       return persist(data.user, data.token);
     } catch (err) {
-      return rejectWithValue(err.message || 'Registration failed');
+      return rejectWithValue({
+        message: err.message || 'Registration failed',
+        code: err.code || 'UNKNOWN',
+      });
     }
   }
 );
@@ -49,6 +55,7 @@ const initialState = {
   isAuthenticated: !!loadUser(),
   loading: false,
   error: null,
+  errorCode: null,
 };
 
 const authSlice = createSlice({
@@ -65,7 +72,7 @@ const authSlice = createSlice({
       state.user = { ...state.user, ...action.payload };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state.user));
     },
-    clearError: (state) => { state.error = null; },
+    clearError: (state) => { state.error = null; state.errorCode = null; },
   },
   extraReducers: (builder) => {
     const handlePending = (state) => {
@@ -78,7 +85,9 @@ const authSlice = createSlice({
     };
     const handleRejected = (state, action) => {
       state.loading = false;
-      state.error = action.payload || 'Authentication failed';
+      const payload = action.payload || {};
+      state.error = typeof payload === 'string' ? payload : (payload.message || 'Authentication failed');
+      state.errorCode = typeof payload === 'object' ? payload.code : undefined;
     };
 
     builder
