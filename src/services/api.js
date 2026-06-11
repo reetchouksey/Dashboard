@@ -1,14 +1,18 @@
 import axios from 'axios';
 
+// Hosted backend (Render). Used as the production fallback when the frontend
+// is served from a static host like Vercel that doesn't run Express itself.
+// Override at build time with VITE_API_URL when deploying the backend elsewhere.
+const PRODUCTION_API_URL = 'https://ems-dashboard-khat.onrender.com';
+
 // Resolve the API base URL with a smart fallback chain:
-//   1. VITE_API_URL    – explicit override (recommended for prod)
-//   2. Production host – on a deployed build, assume the API is served
-//                        from the same origin (single-service deploys
-//                        like Render where Express also serves /dist).
-//   3. LAN hostname    – when accessing the dev server from another device
-//                        on the same Wi-Fi (phone -> http://192.168.x.x:3000),
-//                        call the API on the same host with port 5000.
-//   4. localhost:5000  – default when running `npm start` on your PC.
+//   1. VITE_API_URL       – explicit override (recommended for custom deploys)
+//   2. Same-origin API    – when the deployed host also runs Express
+//                           (e.g. the Render single-service deploy serving /dist).
+//   3. PRODUCTION_API_URL – frontend-only hosts like Vercel fall back here.
+//   4. LAN hostname       – dev server viewed from another device on Wi-Fi
+//                           (phone -> http://192.168.x.x:3000) calls :5000.
+//   5. localhost:5000     – default when running `npm start` on your PC.
 const resolveBaseURL = () => {
   const fromEnv = import.meta.env.VITE_API_URL;
   if (fromEnv) return fromEnv.replace(/\/$/, '');
@@ -17,8 +21,16 @@ const resolveBaseURL = () => {
     const { protocol, hostname, origin } = window.location;
     const isLocal = hostname === 'localhost' || hostname === '127.0.0.1';
     if (!isLocal) {
-      // Same-origin in production builds (single-service deployments).
-      if (import.meta.env.PROD) return origin;
+      if (import.meta.env.PROD) {
+        // If the page is served from the Render backend itself, talk to it
+        // same-origin. Otherwise (Vercel, custom domains, etc.) fall back
+        // to the hosted Render API.
+        try {
+          const prodHost = new URL(PRODUCTION_API_URL).hostname;
+          if (hostname === prodHost) return origin;
+        } catch (_) { /* malformed PRODUCTION_API_URL – ignore */ }
+        return PRODUCTION_API_URL;
+      }
       // Dev mode being viewed from another device on the LAN.
       return `${protocol}//${hostname}:5000`;
     }
@@ -31,7 +43,9 @@ const baseURL = resolveBaseURL();
 const api = axios.create({
   baseURL,
   headers: { 'Content-Type': 'application/json' },
-  timeout: 15000,
+  // Render free-tier services sleep after ~15 min of inactivity and can take
+  // 30–60s to wake up on the first request. Allow plenty of headroom.
+  timeout: 60000,
 });
 
 api.interceptors.request.use((config) => {
